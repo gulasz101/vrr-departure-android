@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Background circle -->
+    <path
+        android:fillColor="#88A4FF"
+        android:pathData="M54,54m-40,0a40,40 0,1 1,80 0a40,40 0,1 1,-80 0"/>
+    <!-- Train/tram icon -->
+    <path
+        android:fillColor="#1A1A2E"
+        android:pathData="M40,35h28c2.2,0 4,1.8 4,4v24c0,2.2 -1.8,4 -4,4h-28c-2.2,0 -4,-1.8 -4,-4v-24c0,-2.2 1.8,-4 4,-4z"/>
+    <path
+        android:fillColor="#EEEEEE"
+        android:pathData="M42,40h24v12h-24z"/>
+    <path
+        android:fillColor="#88A4FF"
+        android:pathData="M44,56m-3,0a3,3 0,1 1,6 0a3,3 0,1 1,-6 0"/>
+    <path
+        android:fillColor="#88A4FF"
+        android:pathData="M64,56m-3,0a3,3 0,1 1,6 0a3,3 0,1 1,-6 0"/>
+    <!-- Rails -->
+    <path
+        android:fillColor="#1A1A2E"
+        android:strokeWidth="2"
+        android:pathData="M40,70l-4,8M68,70l4,8"/>
+</vector>

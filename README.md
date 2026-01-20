@@ -10,7 +10,7 @@ This is the Android version of the [VRR Departure Board Web App](https://github.
   <img src="screenshots/departure-board-single-stop.png" width="200" alt="Departure Board - Single Stop"/>
   <img src="screenshots/departure-board-multiple-stops.png" width="200" alt="Departure Board - Multiple Stops"/>
   <img src="screenshots/settings-screen.png" width="200" alt="Settings Screen"/>
-  <img src="screenshots/add-stop-dialog.png" width="200" alt="Add Stop Dialog"/>
+  <img src="screenshots/edit-stop-dialog.jpeg" width="200" alt="Edit Stop Dialog with Platform Picker"/>
 </p>
 
 ## Features

@@ -75,7 +75,7 @@ fun DepartureCard(
                 if (departure.platform.isNotBlank()) {
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = "Gleis ${departure.platform}",
+                        text = "Platform ${departure.platform}",
                         style = MaterialTheme.typography.bodySmall,
                         color = TextSecondary
                     )

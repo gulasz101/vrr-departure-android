@@ -186,8 +186,31 @@ class SettingsViewModel @Inject constructor(
         _uiState.update {
             it.copy(
                 showEditStopDialog = true,
-                editingStop = stop
+                editingStop = stop,
+                availablePlatforms = emptyList(),
+                isLoadingPlatforms = true
             )
+        }
+        // Fetch available platforms for this stop
+        viewModelScope.launch {
+            try {
+                val departures = repository.getDepartures(stop.id)
+                val platforms = departures
+                    .map { it.platform }
+                    .filter { it.isNotBlank() }
+                    .distinct()
+                    .sorted()
+                Log.d("SettingsVM", "Edit dialog - Found ${platforms.size} platforms: $platforms")
+                _uiState.update {
+                    it.copy(
+                        availablePlatforms = platforms,
+                        isLoadingPlatforms = false
+                    )
+                }
+            } catch (e: Exception) {
+                Log.e("SettingsVM", "Error fetching platforms for edit", e)
+                _uiState.update { it.copy(isLoadingPlatforms = false) }
+            }
         }
     }
 
@@ -195,7 +218,9 @@ class SettingsViewModel @Inject constructor(
         _uiState.update {
             it.copy(
                 showEditStopDialog = false,
-                editingStop = null
+                editingStop = null,
+                availablePlatforms = emptyList(),
+                isLoadingPlatforms = false
             )
         }
     }

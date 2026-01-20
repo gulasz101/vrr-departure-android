@@ -277,6 +277,8 @@ fun SettingsScreen(
     if (uiState.showEditStopDialog && uiState.editingStop != null) {
         EditStopDialog(
             stop = uiState.editingStop!!,
+            availablePlatforms = uiState.availablePlatforms,
+            isLoadingPlatforms = uiState.isLoadingPlatforms,
             onUpdate = viewModel::updateStop,
             onDelete = viewModel::removeStop,
             onDismiss = viewModel::hideEditStopDialog

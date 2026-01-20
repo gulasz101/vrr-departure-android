@@ -8,8 +8,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
@@ -36,6 +38,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.vrr.departureboard.domain.model.StopConfig
+import com.vrr.departureboard.ui.components.PlatformDropdownPicker
 import com.vrr.departureboard.ui.theme.AccentBlue
 import com.vrr.departureboard.ui.theme.AccentRed
 import com.vrr.departureboard.ui.theme.BackgroundPrimary
@@ -45,12 +48,14 @@ import com.vrr.departureboard.ui.theme.TextSecondary
 @Composable
 fun EditStopDialog(
     stop: StopConfig,
+    availablePlatforms: List<String>,
+    isLoadingPlatforms: Boolean,
     onUpdate: (StopConfig) -> Unit,
     onDelete: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
     var label by remember { mutableStateOf(stop.label) }
-    var platforms by remember { mutableStateOf(stop.platforms.joinToString(", ")) }
+    var selectedPlatforms by remember { mutableStateOf(stop.platforms.toSet()) }
     var timeFrom by remember { mutableIntStateOf(stop.timeFrom) }
     var timeTo by remember { mutableIntStateOf(stop.timeTo) }
 
@@ -95,69 +100,26 @@ fun EditStopDialog(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                Text(
-                    text = stop.name,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = AccentBlue
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Label field
-                OutlinedTextField(
-                    value = label,
-                    onValueChange = { label = it },
-                    modifier = Modifier.fillMaxWidth(),
-                    label = { Text("Label (optional)", color = TextSecondary) },
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = TextPrimary,
-                        unfocusedTextColor = TextPrimary,
-                        focusedBorderColor = AccentBlue,
-                        unfocusedBorderColor = TextSecondary,
-                        cursorColor = AccentBlue
-                    ),
-                    singleLine = true
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // Platforms field
-                OutlinedTextField(
-                    value = platforms,
-                    onValueChange = { platforms = it },
-                    modifier = Modifier.fillMaxWidth(),
-                    label = { Text("Platforms (comma-separated, leave empty for all)", color = TextSecondary) },
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = TextPrimary,
-                        unfocusedTextColor = TextPrimary,
-                        focusedBorderColor = AccentBlue,
-                        unfocusedBorderColor = TextSecondary,
-                        cursorColor = AccentBlue
-                    ),
-                    singleLine = true
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // Time range
-                Text(
-                    text = "Time range (minutes from now)",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = TextSecondary
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                // Scrollable content
+                Column(
+                    modifier = Modifier
+                        .weight(1f, fill = false)
+                        .verticalScroll(rememberScrollState())
                 ) {
+                    Text(
+                        text = stop.name,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = AccentBlue
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Label field
                     OutlinedTextField(
-                        value = timeFrom.toString(),
-                        onValueChange = { timeFrom = it.toIntOrNull() ?: 0 },
-                        modifier = Modifier.weight(1f),
-                        label = { Text("From", color = TextSecondary) },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        value = label,
+                        onValueChange = { label = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("Label (optional)", color = TextSecondary) },
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedTextColor = TextPrimary,
                             unfocusedTextColor = TextPrimary,
@@ -167,21 +129,71 @@ fun EditStopDialog(
                         ),
                         singleLine = true
                     )
-                    OutlinedTextField(
-                        value = timeTo.toString(),
-                        onValueChange = { timeTo = it.toIntOrNull() ?: 60 },
-                        modifier = Modifier.weight(1f),
-                        label = { Text("To", color = TextSecondary) },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedTextColor = TextPrimary,
-                            unfocusedTextColor = TextPrimary,
-                            focusedBorderColor = AccentBlue,
-                            unfocusedBorderColor = TextSecondary,
-                            cursorColor = AccentBlue
-                        ),
-                        singleLine = true
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Platform dropdown picker
+                    PlatformDropdownPicker(
+                        availablePlatforms = availablePlatforms,
+                        selectedPlatforms = selectedPlatforms,
+                        isLoading = isLoadingPlatforms,
+                        onPlatformToggle = { platform ->
+                            selectedPlatforms = if (selectedPlatforms.contains(platform)) {
+                                selectedPlatforms - platform
+                            } else {
+                                selectedPlatforms + platform
+                            }
+                        },
+                        onSelectAll = { selectedPlatforms = emptySet() },
+                        modifier = Modifier.fillMaxWidth()
                     )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Time range
+                    Text(
+                        text = "Time range (minutes from now)",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = TextSecondary
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        OutlinedTextField(
+                            value = timeFrom.toString(),
+                            onValueChange = { timeFrom = it.toIntOrNull() ?: 0 },
+                            modifier = Modifier.weight(1f),
+                            label = { Text("From", color = TextSecondary) },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedTextColor = TextPrimary,
+                                unfocusedTextColor = TextPrimary,
+                                focusedBorderColor = AccentBlue,
+                                unfocusedBorderColor = TextSecondary,
+                                cursorColor = AccentBlue
+                            ),
+                            singleLine = true
+                        )
+                        OutlinedTextField(
+                            value = timeTo.toString(),
+                            onValueChange = { timeTo = it.toIntOrNull() ?: 60 },
+                            modifier = Modifier.weight(1f),
+                            label = { Text("To", color = TextSecondary) },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedTextColor = TextPrimary,
+                                unfocusedTextColor = TextPrimary,
+                                focusedBorderColor = AccentBlue,
+                                unfocusedBorderColor = TextSecondary,
+                                cursorColor = AccentBlue
+                            ),
+                            singleLine = true
+                        )
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(20.dp))
@@ -197,14 +209,10 @@ fun EditStopDialog(
                     Spacer(modifier = Modifier.width(8.dp))
                     Button(
                         onClick = {
-                            val platformList = platforms
-                                .split(",")
-                                .map { it.trim() }
-                                .filter { it.isNotBlank() }
                             onUpdate(
                                 stop.copy(
                                     label = label,
-                                    platforms = platformList,
+                                    platforms = selectedPlatforms.toList(),
                                     timeFrom = timeFrom,
                                     timeTo = timeTo
                                 )

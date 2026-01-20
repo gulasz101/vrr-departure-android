@@ -1316,3 +1316,189 @@ text = "Platform ${departure.platform}"
 - v0.1.1 - Platform dropdown picker, EditStopDialog fix
 
 ---
+
+### Session 5: 2026-01-20 - Lifecycle-Aware Refresh & Error Handling (v0.1.2)
+
+#### Session Context
+- **Previous session**: Platform dropdown picker, EditStopDialog fix, v0.1.1 release
+- **This session goal**: Fix battery drain issue and improve error handling
+
+#### User Reported Issue
+After unlocking the phone, the app was showing:
+```
+Unable to resolve host "efa.vrr.de": No address associated with hostname
+```
+
+User was concerned that:
+1. The app was trying to refresh in the background, wasting battery
+2. DNS resolution fails when network isn't ready after phone unlock
+
+#### Work Completed
+
+##### 1. Made Refresh Lifecycle-Aware
+
+**DepartureViewModel.kt changes:**
+- Added `isActive: Boolean` flag to track foreground/background state
+- Added `onResume()` method - starts refresh loop when app is visible
+- Added `onPause()` method - stops refresh loop when app goes to background
+- Modified `startRefreshLoop()` to check `isActive` flag
+- Modified `observeSettings()` to only refresh when active
+
+```kotlin
+private var isActive: Boolean = false
+
+fun onResume() {
+    isActive = true
+    startRefreshLoop()
+    refreshAllStops()
+}
+
+fun onPause() {
+    isActive = false
+    refreshJob?.cancel()
+    refreshJob = null
+}
+
+private fun startRefreshLoop() {
+    refreshJob?.cancel()
+    refreshJob = viewModelScope.launch {
+        while (isActive) {
+            delay(currentRefreshInterval * 1000L)
+            if (isActive) {
+                refreshAllStops()
+            }
+        }
+    }
+}
+```
+
+##### 2. Updated DepartureScreen to Use Lifecycle Events
+
+**DepartureScreen.kt changes:**
+- Added `DisposableEffect` with `LifecycleEventObserver`
+- Calls `viewModel.onResume()` on `ON_RESUME`
+- Calls `viewModel.onPause()` on `ON_PAUSE`
+
+```kotlin
+val lifecycleOwner = LocalLifecycleOwner.current
+
+DisposableEffect(lifecycleOwner) {
+    val observer = LifecycleEventObserver { _, event ->
+        when (event) {
+            Lifecycle.Event.ON_RESUME -> viewModel.onResume()
+            Lifecycle.Event.ON_PAUSE -> viewModel.onPause()
+            else -> {}
+        }
+    }
+    lifecycleOwner.lifecycle.addObserver(observer)
+    onDispose {
+        lifecycleOwner.lifecycle.removeObserver(observer)
+    }
+}
+```
+
+##### 3. Added Tap-to-Retry Functionality
+
+**StopSection.kt changes:**
+- Added `onRetry: (() -> Unit)?` parameter
+- Added "Tap to retry" button when error is displayed
+
+```kotlin
+@Composable
+fun StopSection(
+    state: StopSectionState,
+    onRetry: (() -> Unit)? = null,
+    modifier: Modifier = Modifier
+) {
+    // ... existing code ...
+    when {
+        state.error != null -> {
+            Column {
+                Text(text = state.error, color = AccentRed)
+                if (onRetry != null) {
+                    TextButton(onClick = onRetry) {
+                        Text("Tap to retry", color = AccentBlue)
+                    }
+                }
+            }
+        }
+    }
+}
+```
+
+**DepartureViewModel.kt:**
+- Added `retryStop(stopId: String)` method
+
+**DepartureScreen.kt:**
+- Passes `onRetry = { viewModel.retryStop(stopState.config.id) }` to StopSection
+
+##### 4. Improved Error Messages
+
+Replaced technical exception messages with user-friendly text:
+
+```kotlin
+val errorMessage = when {
+    e.message?.contains("Unable to resolve host") == true ->
+        "No internet connection"
+    e.message?.contains("timeout") == true ->
+        "Connection timed out"
+    e.message?.contains("ConnectException") == true ->
+        "Cannot connect to server"
+    else ->
+        "Failed to load departures"
+}
+```
+
+#### Files Changed
+
+1. `app/src/main/java/com/vrr/departureboard/ui/screens/departure/DepartureViewModel.kt`
+   - Added lifecycle-aware refresh logic
+   - Added `retryStop()` method
+   - Added user-friendly error messages
+
+2. `app/src/main/java/com/vrr/departureboard/ui/screens/departure/DepartureScreen.kt`
+   - Added lifecycle observer to call onResume/onPause
+   - Pass onRetry callback to StopSection
+
+3. `app/src/main/java/com/vrr/departureboard/ui/components/StopSection.kt`
+   - Added `onRetry` parameter
+   - Added "Tap to retry" button
+
+#### Git Commit
+
+```
+879d727 - Fix battery drain and improve error handling
+
+- Make refresh lifecycle-aware: only refresh when app is in foreground
+- Add onResume/onPause lifecycle hooks to pause/resume refresh loop
+- Add tap-to-retry button when a stop fails to load
+- Show user-friendly error messages instead of technical exceptions
+
+Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
+```
+
+#### Release Created
+
+- **Tag**: `v0.1.2`
+- **Release URL**: https://github.com/gulasz101/vrr-departure-android/releases/tag/v0.1.2
+- **Changes**: Lifecycle-aware refresh, tap-to-retry, friendly error messages
+
+#### Current App State (v0.1.2)
+
+**Working Features:**
+- ✅ Stop search with autocomplete
+- ✅ Platform dropdown picker
+- ✅ Add/Edit/Delete stops
+- ✅ Real-time departures display
+- ✅ Auto-refresh (only when app is visible - saves battery)
+- ✅ Tap-to-retry on error
+- ✅ User-friendly error messages
+- ✅ Settings persistence
+- ✅ Dark theme
+
+**Releases:**
+- v0.1.0 - Initial release
+- v0.1.1 - Platform dropdown picker
+- v0.1.2 - Lifecycle-aware refresh, error handling
+
+---

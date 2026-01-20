@@ -4,6 +4,12 @@ A real-time public transport departure board for the **VRR (Verkehrsverbund Rhei
 
 This is the Android version of the [VRR Departure Board Web App](https://github.com/gulasz101/vrr-departure-board).
 
+<p align="center">
+  <a href="https://github.com/gulasz101/vrr-departure-android/releases/latest">
+    <img src="https://img.shields.io/github/v/release/gulasz101/vrr-departure-android?style=for-the-badge&logo=android&logoColor=white&label=Download%20APK&color=3DDC84" alt="Download Latest Release"/>
+  </a>
+</p>
+
 ## Screenshots
 
 <p align="center">

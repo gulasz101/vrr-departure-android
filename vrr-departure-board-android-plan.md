@@ -1092,9 +1092,13 @@ The following types of bash commands have been used and approved in sessions:
 
 **Android Emulator/ADB:**
 - `~/Library/Android/sdk/emulator/emulator -avd Pixel_7_API_34`
+- `~/Library/Android/sdk/platform-tools/adb devices`
+- `~/Library/Android/sdk/platform-tools/adb wait-for-device`
 - `~/Library/Android/sdk/platform-tools/adb shell am start ...`
 - `~/Library/Android/sdk/platform-tools/adb shell am force-stop ...`
+- `~/Library/Android/sdk/platform-tools/adb shell getprop ...`
 - `~/Library/Android/sdk/platform-tools/adb logcat ...`
+- `~/Library/Android/sdk/platform-tools/adb logcat -c` (clear logs)
 - `~/Library/Android/sdk/platform-tools/adb shell input tap/text ...`
 
 **GitHub CLI:**
@@ -1116,6 +1120,24 @@ The following types of bash commands have been used and approved in sessions:
 **Java Version:** JDK 17 (required for Android Gradle Plugin 8.x)
 
 **Emulator AVD:** `Pixel_7_API_34`
+
+### File Operations Granted
+
+- Read any file in the project
+- Write/Edit Kotlin files (`*.kt`)
+- Write/Edit Gradle files (`*.kts`, `*.gradle`)
+- Write/Edit XML files (`*.xml`)
+- Write/Edit Markdown files (`*.md`)
+- Write/Edit YAML files (`*.yml`)
+- Create new files and directories
+- Rename/move files
+
+### Notes for Future Sessions
+
+1. **Emulator**: May already be running from previous session. Check with `adb devices` first.
+2. **GitHub CLI**: Must be authenticated. If `gh` commands fail with auth errors, user needs to run `gh auth login`.
+3. **Gradle**: First build may take longer due to dependency downloads.
+4. **Permissions**: Claude Code may ask for permission on first use of each command type. User can approve once and it applies to similar commands.
 
 ---
 

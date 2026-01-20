@@ -1608,3 +1608,171 @@ e: file://.../DepartureScreen.kt:28:35 Unresolved reference: LocalLifecycleOwner
 - v0.1.2 - Lifecycle-aware refresh, error handling
 
 ---
+
+### Session 5 Continuation: Persistent Signing Key (v0.1.3)
+
+#### Issue Reported
+User reported that app updates required uninstalling the previous version first - could not install update directly over existing app.
+
+#### Root Cause
+Each GitHub Actions build generated a new debug keystore, so every release was signed with a different key. Android requires app updates to be signed with the same key as the original installation.
+
+#### Solution
+Create a persistent release keystore and store it as GitHub secrets.
+
+#### Step-by-Step Progress
+
+##### Step 1: Generate persistent release keystore
+```bash
+keytool -genkey -v -keystore release-keystore.jks \
+  -keyalg RSA -keysize 2048 -validity 10000 \
+  -alias vrr-departure-board \
+  -storepass vrrboard2024 -keypass vrrboard2024 \
+  -dname "CN=VRR Departure Board,O=gulasz101,L=Dusseldorf,C=DE" -noprompt
+```
+
+##### Step 2: Encode keystore as base64 for GitHub secrets
+```bash
+base64 -i release-keystore.jks -o release-keystore.b64
+```
+
+##### Step 3: Update .gitignore
+Added `*.b64` to exclude encoded keystore files (*.jks was already excluded)
+
+##### Step 4: Update build.gradle.kts
+Modified signing config to read from environment variables with fallback to debug keystore:
+```kotlin
+signingConfigs {
+    create("release") {
+        val keystorePath = System.getenv("KEYSTORE_FILE")
+        if (keystorePath != null && file(keystorePath).exists()) {
+            storeFile = file(keystorePath)
+            storePassword = System.getenv("KEYSTORE_PASSWORD")
+            keyAlias = System.getenv("KEY_ALIAS")
+            keyPassword = System.getenv("KEY_PASSWORD")
+        } else {
+            // Fallback to debug keystore for local development
+            storeFile = file(System.getProperty("user.home") + "/.android/debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
+    }
+}
+```
+
+##### Step 5: Update GitHub Actions workflow
+Modified workflow to:
+- Decode keystore from `KEYSTORE_BASE64` secret
+- Pass signing credentials as environment variables
+- Fallback to debug keystore if secrets not configured
+
+##### Step 6: Set up GitHub secrets
+```bash
+gh secret set KEYSTORE_BASE64 < release-keystore.b64
+echo "vrrboard2024" | gh secret set KEYSTORE_PASSWORD
+echo "vrr-departure-board" | gh secret set KEY_ALIAS
+echo "vrrboard2024" | gh secret set KEY_PASSWORD
+```
+
+##### Step 7: Verify secrets
+```bash
+gh secret list
+# Output:
+# KEYSTORE_BASE64    2026-01-20T18:48:16Z
+# KEYSTORE_PASSWORD  2026-01-20T18:48:27Z
+# KEY_ALIAS          2026-01-20T18:48:29Z
+# KEY_PASSWORD       2026-01-20T18:48:31Z
+```
+
+##### Step 8: Commit and push
+```bash
+git add .github/workflows/build.yml .gitignore app/build.gradle.kts
+git commit -m "Add persistent release signing key for app updates"
+git push origin main
+```
+
+##### Step 9: Create release tag
+```bash
+git tag v0.1.3 && git push origin v0.1.3
+```
+
+##### Step 10: Verify release
+Both workflows completed successfully. Release v0.1.3 created with consistent signing key.
+
+#### Files Changed
+
+1. `.gitignore` - Added `*.b64` exclusion
+2. `app/build.gradle.kts` - Environment variable signing config with debug fallback
+3. `.github/workflows/build.yml` - Decode keystore from secrets, pass env vars
+
+#### Git Commits
+
+1. `3e4df8b` - Add persistent release signing key for app updates
+
+#### GitHub Secrets Configured
+
+| Secret | Description |
+|--------|-------------|
+| `KEYSTORE_BASE64` | Base64-encoded release keystore |
+| `KEYSTORE_PASSWORD` | Keystore password |
+| `KEY_ALIAS` | Key alias (vrr-departure-board) |
+| `KEY_PASSWORD` | Key password |
+
+#### Release Created
+
+- **Tag**: `v0.1.3`
+- **Release URL**: https://github.com/gulasz101/vrr-departure-android/releases/tag/v0.1.3
+- **Changes**: Persistent signing key for upgradeable APKs
+
+#### Important Note for Users
+
+Since v0.1.2 was signed with a different (randomly generated) key, users must **uninstall v0.1.2 one more time** to install v0.1.3. However, from v0.1.3 onward, all future updates will be installable directly without uninstalling.
+
+#### Permissions Granted This Session (Continuation)
+
+**Bash Commands Approved:**
+- `keytool -genkey ...` - Generate release keystore
+- `base64 -i ... -o ...` - Encode keystore as base64
+- `gh secret set KEYSTORE_BASE64 < ...` - Set GitHub secret from file
+- `echo "..." | gh secret set ...` - Set GitHub secrets
+- `gh secret list` - List GitHub secrets
+- `gh run list` - Check workflow status
+- `gh run view ...` - View workflow details
+- `gh release view v0.1.3` - View release details
+- `sleep N && ...` - Wait and check status
+
+**File Operations Approved:**
+- Read: `.gitignore`, `.github/workflows/build.yml`, `app/build.gradle.kts`
+- Edit/Write: `.gitignore`, `.github/workflows/build.yml`, `app/build.gradle.kts`
+
+#### Keystore Backup Location
+
+**IMPORTANT**: The release keystore is stored locally at:
+```
+/Users/wojciechgula/Projects/vrr-departure-board-android/release-keystore.jks
+```
+
+**Back this file up securely!** If lost, you will not be able to publish updates that can be installed over existing app installations. The keystore is also stored as `KEYSTORE_BASE64` GitHub secret.
+
+#### Current App State (v0.1.3)
+
+**Working Features:**
+- ✅ Stop search with autocomplete
+- ✅ Platform dropdown picker
+- ✅ Add/Edit/Delete stops
+- ✅ Real-time departures display
+- ✅ Auto-refresh (only when app is visible)
+- ✅ Tap-to-retry on error
+- ✅ User-friendly error messages
+- ✅ Settings persistence
+- ✅ Dark theme
+- ✅ Upgradeable APKs (consistent signing key)
+
+**Releases:**
+- v0.1.0 - Initial release
+- v0.1.1 - Platform dropdown picker
+- v0.1.2 - Lifecycle-aware refresh, error handling
+- v0.1.3 - Persistent signing key for upgrades
+
+---

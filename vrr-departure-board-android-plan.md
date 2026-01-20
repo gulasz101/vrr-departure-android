@@ -1118,3 +1118,179 @@ The following types of bash commands have been used and approved in sessions:
 **Emulator AVD:** `Pixel_7_API_34`
 
 ---
+
+### Session 4: 2026-01-20 - Platform Dropdown Picker & v0.1.1 Release
+
+#### Session Context
+- **Previous session**: Set up GitHub Actions CI/CD, released v0.1.0
+- **This session goal**: Match platform picker UI to web version, fix EditStopDialog
+
+#### User Request
+The user wanted the platform picker to match the web version:
+- Web version has a dropdown with checkboxes (not chips)
+- EditStopDialog was still using a text input field instead of a picker
+- Language should be English ("Platform" not "Gleis")
+
+#### Work Completed
+
+##### 1. Created `PlatformDropdownPicker` Component
+
+New reusable component at `app/src/main/java/com/vrr/departureboard/ui/components/PlatformDropdownPicker.kt`:
+
+**Features:**
+- Expandable dropdown header showing current selection
+- "All platforms" checkbox at top
+- Individual platform checkboxes (Platform 1, Platform 2, etc.)
+- Loading state with spinner
+- "No platforms available" state
+- Green checkmarks for selected items (matching web design)
+- Animated expand/collapse
+
+**Key implementation details:**
+```kotlin
+@Composable
+fun PlatformDropdownPicker(
+    availablePlatforms: List<String>,
+    selectedPlatforms: Set<String>,
+    isLoading: Boolean,
+    onPlatformToggle: (String) -> Unit,
+    onSelectAll: () -> Unit,
+    modifier: Modifier = Modifier
+)
+```
+
+##### 2. Updated `StopSearchDialog`
+
+- Replaced `FlowRow` with chips → `PlatformDropdownPicker`
+- Added vertical scroll for configuration section
+- Cleaner layout
+
+##### 3. Updated `EditStopDialog`
+
+**Before:** Text input field for platforms (comma-separated)
+**After:** Same `PlatformDropdownPicker` as add dialog
+
+Changes:
+- Added `availablePlatforms: List<String>` parameter
+- Added `isLoadingPlatforms: Boolean` parameter
+- Replaced text field with dropdown picker
+- Added vertical scroll support
+
+##### 4. Updated `SettingsViewModel`
+
+Modified `showEditStopDialog()` to fetch platforms:
+```kotlin
+fun showEditStopDialog(stop: StopConfig) {
+    _uiState.update {
+        it.copy(
+            showEditStopDialog = true,
+            editingStop = stop,
+            availablePlatforms = emptyList(),
+            isLoadingPlatforms = true
+        )
+    }
+    // Fetch available platforms for this stop
+    viewModelScope.launch {
+        val departures = repository.getDepartures(stop.id)
+        val platforms = departures
+            .map { it.platform }
+            .filter { it.isNotBlank() }
+            .distinct()
+            .sorted()
+        _uiState.update {
+            it.copy(availablePlatforms = platforms, isLoadingPlatforms = false)
+        }
+    }
+}
+```
+
+##### 5. Updated `SettingsScreen`
+
+Added new parameters to `EditStopDialog` call:
+```kotlin
+EditStopDialog(
+    stop = uiState.editingStop!!,
+    availablePlatforms = uiState.availablePlatforms,
+    isLoadingPlatforms = uiState.isLoadingPlatforms,
+    onUpdate = viewModel::updateStop,
+    onDelete = viewModel::removeStop,
+    onDismiss = viewModel::hideEditStopDialog
+)
+```
+
+##### 6. Language Fix
+
+Changed "Gleis" to "Platform" in `DepartureCard.kt`:
+```kotlin
+// Before:
+text = "Gleis ${departure.platform}"
+
+// After:
+text = "Platform ${departure.platform}"
+```
+
+#### Files Changed
+
+1. `app/src/main/java/com/vrr/departureboard/ui/components/PlatformDropdownPicker.kt` (new)
+   - Reusable dropdown picker with checkboxes
+
+2. `app/src/main/java/com/vrr/departureboard/ui/screens/settings/StopSearchDialog.kt`
+   - Replaced chips with dropdown picker
+
+3. `app/src/main/java/com/vrr/departureboard/ui/screens/settings/EditStopDialog.kt`
+   - Added platform picker (was text input)
+   - Added new parameters for platforms
+
+4. `app/src/main/java/com/vrr/departureboard/ui/screens/settings/SettingsViewModel.kt`
+   - `showEditStopDialog()` now fetches platforms
+   - `hideEditStopDialog()` clears platform state
+
+5. `app/src/main/java/com/vrr/departureboard/ui/screens/settings/SettingsScreen.kt`
+   - Pass platform parameters to EditStopDialog
+
+6. `app/src/main/java/com/vrr/departureboard/ui/components/DepartureCard.kt`
+   - Changed "Gleis" → "Platform"
+
+#### Git Commits
+
+1. `349699b` - Add README with screenshots and API documentation
+2. `388937e` - Add dropdown platform picker matching web version
+
+#### Release Created
+
+- **Tag**: `v0.1.1`
+- **Release URL**: https://github.com/gulasz101/vrr-departure-android/releases/tag/v0.1.1
+- **Changes**: Platform dropdown picker, EditStopDialog fix, English language
+
+#### Testing Commands Used
+
+```bash
+# Build and install on emulator
+./gradlew installDebug --no-daemon
+
+# Launch the app
+~/Library/Android/sdk/platform-tools/adb shell am start -n com.vrr.departureboard/.MainActivity
+
+# Check if emulator is running
+~/Library/Android/sdk/platform-tools/adb devices
+```
+
+#### Current App State
+
+**Working Features (as of v0.1.1):**
+- ✅ Stop search with autocomplete
+- ✅ Platform dropdown picker (matching web version)
+- ✅ Add stop with platform selection
+- ✅ Edit stop with platform selection (was broken, now fixed)
+- ✅ Delete stops
+- ✅ Real-time departures display
+- ✅ Auto-refresh
+- ✅ Settings persistence
+- ✅ Dark theme
+- ✅ All text in English
+
+**Releases:**
+- v0.1.0 - Initial release with basic functionality
+- v0.1.1 - Platform dropdown picker, EditStopDialog fix
+
+---

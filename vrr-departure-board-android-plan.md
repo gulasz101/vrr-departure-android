@@ -1776,3 +1776,32 @@ Since v0.1.2 was signed with a different (randomly generated) key, users must **
 - v0.1.3 - Persistent signing key for upgrades
 
 ---
+
+### Session 5 Final: README Download Badge
+
+#### User Request
+Add a visible "Download Latest Release" button to the README.
+
+#### Implementation
+Added a centered shields.io badge with:
+- Android logo
+- Green color (#3DDC84 - Android brand color)
+- "for-the-badge" style for large, prominent display
+- Links to `/releases/latest`
+
+```markdown
+<p align="center">
+  <a href="https://github.com/gulasz101/vrr-departure-android/releases/latest">
+    <img src="https://img.shields.io/github/v/release/gulasz101/vrr-departure-android?style=for-the-badge&logo=android&logoColor=white&label=Download%20APK&color=3DDC84" alt="Download Latest Release"/>
+  </a>
+</p>
+```
+
+#### Git Commit
+`db35972` - Add prominent download badge to README
+
+#### Permissions Granted
+- Edit: `README.md`
+- Bash: `git add`, `git commit`, `git push`
+
+---

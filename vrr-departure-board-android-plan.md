@@ -1322,6 +1322,7 @@ text = "Platform ${departure.platform}"
 #### Session Context
 - **Previous session**: Platform dropdown picker, EditStopDialog fix, v0.1.1 release
 - **This session goal**: Fix battery drain issue and improve error handling
+- **Note**: This session was continued from a summarized/compacted conversation
 
 #### User Reported Issue
 After unlocking the phone, the app was showing:
@@ -1333,7 +1334,85 @@ User was concerned that:
 1. The app was trying to refresh in the background, wasting battery
 2. DNS resolution fails when network isn't ready after phone unlock
 
-#### Work Completed
+#### Step-by-Step Progress
+
+##### Step 1: Read existing files to understand current state
+Files read at session start (from compaction summary):
+- `DepartureViewModel.kt` - Already had lifecycle changes from previous conversation part
+- `README.md` - Project documentation
+- `DepartureCard.kt` - UI component
+- `SettingsScreen.kt` - Settings UI
+
+##### Step 2: Read DepartureScreen.kt and StopSection.kt
+- Read `DepartureScreen.kt` to understand current structure
+- Read `StopSection.kt` to see error display implementation
+
+##### Step 3: Update DepartureScreen.kt - Add lifecycle imports
+Added imports for lifecycle awareness:
+```kotlin
+import androidx.compose.runtime.DisposableEffect
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner  // WRONG - caused build error
+```
+
+##### Step 4: Update DepartureScreen.kt - Add lifecycle observer
+Added `DisposableEffect` to observe lifecycle events and call `viewModel.onResume()` / `viewModel.onPause()`
+
+##### Step 5: Update StopSection.kt - Add imports
+Added imports for tap-to-retry:
+```kotlin
+import androidx.compose.foundation.clickable
+import androidx.compose.material3.TextButton
+```
+
+##### Step 6: Update StopSection.kt - Add onRetry parameter
+Added `onRetry: (() -> Unit)? = null` parameter to `StopSection` composable
+
+##### Step 7: Update StopSection.kt - Add retry button UI
+Updated error display to show "Tap to retry" button when `onRetry` is provided
+
+##### Step 8: Update DepartureScreen.kt - Pass onRetry callback
+Updated `StopSection` call to include `onRetry = { viewModel.retryStop(stopState.config.id) }`
+
+##### Step 9: Build failed - LocalLifecycleOwner import error
+```
+e: Unresolved reference: LocalLifecycleOwner
+```
+
+The import `androidx.lifecycle.compose.LocalLifecycleOwner` was incorrect.
+
+##### Step 10: Fix import path
+Changed from:
+```kotlin
+import androidx.lifecycle.compose.LocalLifecycleOwner
+```
+To:
+```kotlin
+import androidx.compose.ui.platform.LocalLifecycleOwner
+```
+
+##### Step 11: Build successful
+```
+BUILD SUCCESSFUL in 6s
+38 actionable tasks: 9 executed, 29 up-to-date
+```
+
+##### Step 12: Git commit and push
+```bash
+git add ... && git commit -m "Fix battery drain and improve error handling..."
+git tag v0.1.2 && git push origin main && git push origin v0.1.2
+```
+
+##### Step 13: Update plan file with session log
+Added Session 5 documentation to this file
+
+##### Step 14: Commit plan file update
+```bash
+git add vrr-departure-board-android-plan.md && git commit && git push
+```
+
+#### Code Changes Detail
 
 ##### 1. Made Refresh Lifecycle-Aware
 
@@ -1380,6 +1459,12 @@ private fun startRefreshLoop() {
 - Calls `viewModel.onPause()` on `ON_PAUSE`
 
 ```kotlin
+import androidx.compose.runtime.DisposableEffect
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.compose.ui.platform.LocalLifecycleOwner  // Correct import path!
+
+// In composable function:
 val lifecycleOwner = LocalLifecycleOwner.current
 
 DisposableEffect(lifecycleOwner) {
@@ -1416,6 +1501,7 @@ fun StopSection(
             Column {
                 Text(text = state.error, color = AccentRed)
                 if (onRetry != null) {
+                    Spacer(modifier = Modifier.height(8.dp))
                     TextButton(onClick = onRetry) {
                         Text("Tap to retry", color = AccentBlue)
                     }
@@ -1449,6 +1535,17 @@ val errorMessage = when {
 }
 ```
 
+#### Build Error Encountered & Fixed
+
+**Error:**
+```
+e: file://.../DepartureScreen.kt:28:35 Unresolved reference: LocalLifecycleOwner
+```
+
+**Cause:** Wrong import path for `LocalLifecycleOwner`
+
+**Fix:** Changed import from `androidx.lifecycle.compose.LocalLifecycleOwner` to `androidx.compose.ui.platform.LocalLifecycleOwner`
+
 #### Files Changed
 
 1. `app/src/main/java/com/vrr/departureboard/ui/screens/departure/DepartureViewModel.kt`
@@ -1464,24 +1561,33 @@ val errorMessage = when {
    - Added `onRetry` parameter
    - Added "Tap to retry" button
 
-#### Git Commit
+#### Git Commits
 
-```
-879d727 - Fix battery drain and improve error handling
-
-- Make refresh lifecycle-aware: only refresh when app is in foreground
-- Add onResume/onPause lifecycle hooks to pause/resume refresh loop
-- Add tap-to-retry button when a stop fails to load
-- Show user-friendly error messages instead of technical exceptions
-
-Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
-```
+1. `879d727` - Fix battery drain and improve error handling
+2. `d7efb3b` - Update plan with Session 5 log (v0.1.2 release)
 
 #### Release Created
 
 - **Tag**: `v0.1.2`
 - **Release URL**: https://github.com/gulasz101/vrr-departure-android/releases/tag/v0.1.2
 - **Changes**: Lifecycle-aware refresh, tap-to-retry, friendly error messages
+
+#### Permissions Granted This Session
+
+**Bash Commands Approved:**
+- `./gradlew assembleDebug` - Build debug APK
+- `git status` - Check repository status
+- `git diff` - View changes
+- `git log --oneline -5` - View recent commits
+- `git add ... && git commit -m "..."` - Stage and commit changes
+- `git tag v0.1.2` - Create version tag
+- `git push origin main` - Push to remote
+- `git push origin v0.1.2` - Push tag to remote
+- `gh run list --limit 3` - Check GitHub Actions status
+
+**File Operations Approved:**
+- Read: `DepartureScreen.kt`, `StopSection.kt`, `vrr-departure-board-android-plan.md`
+- Edit: `DepartureScreen.kt`, `StopSection.kt`, `vrr-departure-board-android-plan.md`
 
 #### Current App State (v0.1.2)
 

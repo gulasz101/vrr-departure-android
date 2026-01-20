@@ -30,15 +30,28 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Create debug keystore
+      - name: Decode keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
         run: |
-          mkdir -p ~/.android
-          keytool -genkey -v -keystore ~/.android/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US" -noprompt
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 --decode > ${{ github.workspace }}/release-keystore.jks
+            echo "KEYSTORE_FILE=${{ github.workspace }}/release-keystore.jks" >> $GITHUB_ENV
+          else
+            echo "No keystore secret found, creating debug keystore"
+            mkdir -p ~/.android
+            keytool -genkey -v -keystore ~/.android/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US" -noprompt
+          fi
 
       - name: Build Debug APK
         run: ./gradlew assembleDebug
 
       - name: Build Release APK
+        env:
+          KEYSTORE_FILE: ${{ env.KEYSTORE_FILE }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: ./gradlew assembleRelease
 
       - name: Upload Debug APK
@@ -74,12 +87,25 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Create debug keystore
+      - name: Decode keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
         run: |
-          mkdir -p ~/.android
-          keytool -genkey -v -keystore ~/.android/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US" -noprompt
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 --decode > ${{ github.workspace }}/release-keystore.jks
+            echo "KEYSTORE_FILE=${{ github.workspace }}/release-keystore.jks" >> $GITHUB_ENV
+          else
+            echo "No keystore secret found, creating debug keystore"
+            mkdir -p ~/.android
+            keytool -genkey -v -keystore ~/.android/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US" -noprompt
+          fi
 
       - name: Build Release APK
+        env:
+          KEYSTORE_FILE: ${{ env.KEYSTORE_FILE }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: ./gradlew assembleRelease
 
       - name: Get version from tag
@@ -103,8 +129,8 @@ jobs:
             2. On your Android phone, enable "Install from unknown sources" in Settings
             3. Open the downloaded APK to install
 
-            ### Note
-            This is an unsigned APK. Your phone may show a warning - this is normal for apps not from the Play Store.
+            ### Upgrading
+            This APK is signed with a consistent key, so you can install updates directly over previous versions without uninstalling first.
           files: |
             app/build/outputs/apk/release/vrr-departure-board-${{ steps.get_version.outputs.VERSION }}.apk
           draft: false

@@ -870,3 +870,251 @@ app/src/main/java/com/vrr/departureboard/
    - Added `availablePlatforms` and `isLoadingPlatforms` parameters to `StopSearchDialog` call
 
 ---
+
+### Session 3: 2026-01-20 - Git Init, GitHub Actions CI/CD Setup
+
+#### Session Context
+- **Previous session**: Fixed stop search bug, implemented platform picker feature
+- **This session goal**: Initialize git repo, set up GitHub Actions for automated builds and releases
+
+#### Work Completed
+
+##### 1. Git Repository Initialization
+
+- Initialized git repository
+- Created comprehensive `.gitignore` for Android projects (excludes build artifacts, local.properties, IDE caches, etc.)
+- Initial commit with 54 files, 4,200 lines of code
+
+##### 2. GitHub Actions Workflow Setup
+
+Created `.github/workflows/build.yml` with the following features:
+
+**Triggers:**
+- Push to `main` branch
+- Push of version tags (`v*`)
+- Pull requests to `main`
+- Manual trigger (`workflow_dispatch`)
+
+**Jobs:**
+
+1. **Build Job** (runs on all triggers):
+   - Sets up JDK 17 (Temurin)
+   - Creates debug keystore (required for signing)
+   - Builds debug and release APKs
+   - Uploads both as artifacts (30-day retention)
+
+2. **Release Job** (runs only on version tags):
+   - Builds release APK
+   - Renames APK with version number
+   - Creates GitHub Release with APK attached
+   - Includes installation instructions in release notes
+
+##### 3. Issues Encountered & Fixed
+
+**Issue 1: Debug Keystore Not Found**
+```
+Keystore file '/home/runner/.android/debug.keystore' not found for signing config 'release'.
+```
+
+**Fix**: Added step to create debug keystore before building:
+```yaml
+- name: Create debug keystore
+  run: |
+    mkdir -p ~/.android
+    keytool -genkey -v -keystore ~/.android/debug.keystore \
+      -storepass android -alias androiddebugkey -keypass android \
+      -keyalg RSA -keysize 2048 -validity 10000 \
+      -dname "CN=Android Debug,O=Android,C=US" -noprompt
+```
+
+**Issue 2: Permission Denied Creating Release (403 Error)**
+```
+⚠️ GitHub release failed with status: 403
+```
+
+**Fix**: Added permissions to workflow:
+```yaml
+permissions:
+  contents: write  # Required for creating releases
+```
+
+##### 4. Build Configuration Changes
+
+Updated `app/build.gradle.kts` to sign release builds with debug keystore:
+```kotlin
+signingConfigs {
+    create("release") {
+        storeFile = file(System.getProperty("user.home") + "/.android/debug.keystore")
+        storePassword = "android"
+        keyAlias = "androiddebugkey"
+        keyPassword = "android"
+    }
+}
+
+buildTypes {
+    release {
+        isMinifyEnabled = false
+        signingConfig = signingConfigs.getByName("release")
+        proguardFiles(...)
+    }
+}
+```
+
+#### Final Workflow File
+
+Location: `.github/workflows/build.yml`
+
+```yaml
+name: Build & Release Android App
+
+on:
+  push:
+    branches: [ main ]
+    tags:
+      - 'v*'
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: gradle
+      - run: chmod +x gradlew
+      - name: Create debug keystore
+        run: |
+          mkdir -p ~/.android
+          keytool -genkey -v -keystore ~/.android/debug.keystore ...
+      - run: ./gradlew assembleDebug
+      - run: ./gradlew assembleRelease
+      - uses: actions/upload-artifact@v4 (debug + release APKs)
+
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - ... (same setup)
+      - run: ./gradlew assembleRelease
+      - Rename APK with version
+      - uses: softprops/action-gh-release@v1
+```
+
+#### Git Commits Made This Session
+
+1. `26e1a89` - Initial commit: VRR Departure Board Android app
+2. `74617ed` - Add GitHub Actions workflow for building and releasing APK
+3. `5a5d675` - Fix GitHub Actions: create debug keystore before building
+4. `c6f37a6` - Fix GitHub Actions: add write permissions for releases
+
+#### Release Created
+
+- **Tag**: `v0.1.0`
+- **Release URL**: https://github.com/gulasz101/vrr-departure-android/releases/tag/v0.1.0
+- **Asset**: `vrr-departure-board-v0.1.0.apk`
+
+#### How to Create Future Releases
+
+```bash
+# 1. Make your changes and commit
+git add -A && git commit -m "Your changes"
+
+# 2. Push to main
+git push origin main
+
+# 3. Create and push a version tag
+git tag v0.2.0
+git push origin v0.2.0
+
+# This triggers the release workflow automatically
+```
+
+#### Useful GitHub CLI Commands
+
+```bash
+# List recent workflow runs
+gh run list --limit 5
+
+# View failed run logs
+gh run view <run-id> --log-failed
+
+# List releases
+gh release list
+
+# View release details
+gh release view v0.1.0
+
+# Download release asset
+gh release download v0.1.0
+```
+
+#### Files Changed This Session
+
+1. `.gitignore` (new) - Android-specific ignore patterns
+2. `.github/workflows/build.yml` (new) - CI/CD workflow
+3. `app/build.gradle.kts` - Added release signing config with debug keystore
+
+---
+
+## 10. Claude Code Permissions Reference
+
+This section documents permissions that have been granted during development sessions. When starting a new session, these may need to be re-granted.
+
+### Tools & CLI Authentication
+
+| Tool | Purpose | How to Setup |
+|------|---------|--------------|
+| `gh` (GitHub CLI) | Manage GitHub repos, workflows, releases | `brew install gh && gh auth login` |
+| `adb` | Android Debug Bridge for emulator/device | Comes with Android SDK |
+| `emulator` | Run Android emulator | Comes with Android SDK |
+| `keytool` | Generate signing keystores | Comes with JDK |
+
+### Bash Command Permissions Granted
+
+The following types of bash commands have been used and approved in sessions:
+
+**Git Operations:**
+- `git init`, `git add`, `git commit`, `git push`
+- `git tag`, `git tag -d`, `git push origin :refs/tags/<tag>`
+
+**Gradle/Android Build:**
+- `./gradlew assembleDebug`
+- `./gradlew assembleRelease`
+- `./gradlew installDebug`
+
+**Android Emulator/ADB:**
+- `~/Library/Android/sdk/emulator/emulator -avd Pixel_7_API_34`
+- `~/Library/Android/sdk/platform-tools/adb shell am start ...`
+- `~/Library/Android/sdk/platform-tools/adb shell am force-stop ...`
+- `~/Library/Android/sdk/platform-tools/adb logcat ...`
+- `~/Library/Android/sdk/platform-tools/adb shell input tap/text ...`
+
+**GitHub CLI:**
+- `gh run list`
+- `gh run view <id> --log-failed`
+- `gh release list`
+- `gh release view <tag>`
+
+### Environment Setup Notes
+
+**Android SDK Location (macOS):**
+```
+~/Library/Android/sdk/
+├── emulator/
+├── platform-tools/
+└── ...
+```
+
+**Java Version:** JDK 17 (required for Android Gradle Plugin 8.x)
+
+**Emulator AVD:** `Pixel_7_API_34`
+
+---

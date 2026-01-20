@@ -4,7 +4,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vrr.departureboard.data.local.SettingsDataStore
 import com.vrr.departureboard.data.repository.DepartureRepository
-import com.vrr.departureboard.domain.model.Departure
 import com.vrr.departureboard.domain.model.StopConfig
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
@@ -33,6 +32,7 @@ class DepartureViewModel @Inject constructor(
     private var currentStops: List<StopConfig> = emptyList()
     private var currentRefreshInterval: Int = 30
     private var currentMaxDepartures: Int = 10
+    private var isActive: Boolean = false
 
     init {
         observeSettings()
@@ -61,27 +61,57 @@ class DepartureViewModel @Inject constructor(
                     )
                 }
 
-                // Start or restart refresh loop
-                startRefreshLoop()
-
-                // Immediate refresh when stops change
-                refreshAllStops()
+                // Only refresh if active (app in foreground)
+                if (isActive) {
+                    refreshAllStops()
+                }
             }
         }
+    }
+
+    /**
+     * Called when the screen becomes visible (app in foreground).
+     * Starts the refresh loop and immediately refreshes data.
+     */
+    fun onResume() {
+        isActive = true
+        startRefreshLoop()
+        refreshAllStops()
+    }
+
+    /**
+     * Called when the screen is no longer visible (app in background).
+     * Stops the refresh loop to save battery.
+     */
+    fun onPause() {
+        isActive = false
+        refreshJob?.cancel()
+        refreshJob = null
     }
 
     private fun startRefreshLoop() {
         refreshJob?.cancel()
         refreshJob = viewModelScope.launch {
-            while (true) {
+            while (isActive) {
                 delay(currentRefreshInterval * 1000L)
-                refreshAllStops()
+                if (isActive) {
+                    refreshAllStops()
+                }
             }
         }
     }
 
     fun refreshAllStops() {
         currentStops.forEach { config ->
+            refreshStop(config)
+        }
+    }
+
+    /**
+     * Retry loading a specific stop that failed.
+     */
+    fun retryStop(stopId: String) {
+        currentStops.find { it.id == stopId }?.let { config ->
             refreshStop(config)
         }
     }
@@ -128,10 +158,21 @@ class DepartureViewModel @Inject constructor(
                 _uiState.update { it.copy(lastGlobalUpdate = updateTime) }
 
             } catch (e: Exception) {
+                val errorMessage = when {
+                    e.message?.contains("Unable to resolve host") == true ->
+                        "No internet connection"
+                    e.message?.contains("timeout") == true ->
+                        "Connection timed out"
+                    e.message?.contains("ConnectException") == true ->
+                        "Cannot connect to server"
+                    else ->
+                        "Failed to load departures"
+                }
+
                 updateStopState(config.id) { state ->
                     state.copy(
                         isLoading = false,
-                        error = e.message ?: "Failed to load departures"
+                        error = errorMessage
                     )
                 }
             }

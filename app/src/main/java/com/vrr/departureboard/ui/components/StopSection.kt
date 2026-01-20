@@ -1,6 +1,7 @@
 package com.vrr.departureboard.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,6 +16,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -39,6 +41,7 @@ data class StopSectionState(
 @Composable
 fun StopSection(
     state: StopSectionState,
+    onRetry: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -96,11 +99,23 @@ fun StopSection(
         // Content
         when {
             state.error != null -> {
-                Text(
-                    text = state.error,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = AccentRed
-                )
+                Column {
+                    Text(
+                        text = state.error,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = AccentRed
+                    )
+                    if (onRetry != null) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        TextButton(onClick = onRetry) {
+                            Text(
+                                text = "Tap to retry",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = AccentBlue
+                            )
+                        }
+                    }
+                }
             }
             state.isLoading && state.departures.isEmpty() -> {
                 Text(
